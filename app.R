@@ -10,6 +10,9 @@ source("read_past_data.R")
 source("predict.R")
 
 pastData <- readPastDataset("2016_hist.csv")
+date_from <-"2016/03/04"
+today <- as.Date("2016/03/19")
+date_till <-"2016/03/26"
 min_freq_type <- 15
 
 # Visualization should include an option to aggragate al types
