@@ -1,43 +1,21 @@
 ## app.R ##
+## Application controller ##
 library(shinydashboard)
 library(rjson)
 library(dplyr)
 library(ggplot2)
 
-data <-  read.csv("2016_pred.csv")
-predictions <- data  # read csv file 
+# Import our modules
+source("read_past_data.R")
+source("predict.R")
 
-
-predictions$Date <- gsub( " .*$", "", predictions$Date )
-predictions$Date <- as.Date(predictions$Date, format = "%m/%d/%Y")
-
-
-'%<%' <- function(date1, date2) {
-  as.numeric(as.POSIXct(date1))  <= as.numeric(as.POSIXct(as.Date(date2)))
-}
-
-date_from <-"2016/03/04"
-today <- as.Date("2016/03/19")
-date_till <-"2016/03/26"
-
-predictions <- subset(predictions,( today  %<% Date)  & (Date  %<% date_till), select = c(Latitude, Longitude, Date))
-predictions[['pred']] <- rep(T, nrow(predictions))
-
-#write.table(predictions, file = "2016_pred.csv", sep = ",", quote=FALSE)
-
-mydata <- read.csv("2016_hist.csv", sep = "\t")
-#browser()
-#mydata$Date <- gsub( " .*$", "", mydata$Date )
-mydata$Date <- as.Date(mydata$Date)
-
-mydata <- subset(mydata, Date %<%  date_till &  date_from %<%  Date)
-mydata <- mydata[complete.cases(mydata),]
-#write.table(mydata, file = "2016_hist.csv", sep = "\t", quote=FALSE, row.names = F)
-
+pastData <- readPastDataset("2016_hist.csv")
 min_freq_type <- 15
-crime_type_options <- c("All", as.character(unique(mydata$Primary.Type)))
 
+# Visualization should include an option to aggragate al types
+crime_type_options <- c("All", as.character(unique(pastData$Primary.Type)))
 
+# To Do: Decouple view from business logic -> move js/html code to assets/ and source it instead of embedding
 header <- dashboardHeader(title = "CrimeStorm")
 
 sidebar <- dashboardSidebar(
@@ -52,18 +30,27 @@ sidebar <- dashboardSidebar(
 )
 
 
-
+aboutHTML <-"Crime storm was created 18/3/2017 within a 24h datathon organised by <a href=\"http://www.xomnia.com\">Xomnia</a>.
+            The showcase presented in the dashboard shows is set to show a period from year of 2016, because the data for 2017 were unavailable. 
+            The application was created by a team of six PDEng trainees of <a href=\"http://www.jads.nl/\"> Jheronimus Academy of Data Science</a>: 
+            <ul>
+             <li>Andriy Drebot</li>
+             <li>Mahmoud Khodier (<a href=\"mailto:m.khodier@tue.nl\">contact</a>)</li>
+             <li>You Yue Huang</li>
+             <li>Diego Perez</li>
+             <li>Adam Zika</li>
+             <li>Manos Stergiadis</li>
+            </ul>"
 body <- dashboardBody(
   tabItems(
     tabItem(tabName = "dashboard",
             fluidRow(
-               box(includeHTML('www/test.html'),
+               box(includeHTML('assets/templates/test.html'),
                    selectInput("crime_type", "Type", crime_type_options, selected="")
                  
                     ),
             
                box(#title = "Crime type",  status = "primary",
-                 
                  tabsetPanel(
                    tabPanel("Crime Type",  plotOutput("histPrimaryType", height = 400)), 
                    tabPanel("Location Description",  plotOutput("histLocDesc", height = 400))
@@ -86,9 +73,9 @@ body <- dashboardBody(
                             value = as.Date(date_from),
                             timeFormat="%Y-%m-%d",
                             animate = animationOptions(1000)
-                )
-                )
-              )
+                          )
+                    )
+                  )
             )
             
     ),
@@ -97,27 +84,13 @@ body <- dashboardBody(
             
             box(title = "About", width=10,
                 
-                tags$p(HTML("
-                        Crime storm was created 18/3/2017 within a 24h datathon organised by <a href=\"http://www.xomnia.com\">Xomnia</a>.
-                      The showcase presented in the dashboard shows is set to show a period from year of 2016, because the data for 2017 were unavailable. 
-                        The application was created by a team of six PDEng trainees of <a href=\"http://www.jads.nl/\"> Jheronimus Academy of Data Science</a>: 
-                      <ul>
-                       <li>Andriy Drebot</li>
-                       <li>Mahmoud Khodier (<a href=\"mailto:m.khodier@tue.nl\">contact</a>)</li>
-                       <li>You Yue Huang</li>
-                       <li>Diego Perez</li>
-                       <li>Adam Zika</li>
-                       
-                       
-                       <li>Manos Stergiadis</li>
-                      </ul>")),
-                tags$img(src = "pic.jpg", style="width:100%" ))
+                tags$p(HTML(aboutHTML)),
+                tags$img(src = "images/pic.jpg", style="width:100%" ))
     )
   ),
-  tags$head(tags$script(src="js.js")), #general .js
-  includeCSS("./www/css.css"), #general labelling
- # useShinyjs(),
- # extendShinyjs(text = jsCode),
+  
+  tags$head(tags$script(src="assets/js/main.js")), #general .js
+  includeCSS("./assets/styles/css.css"), #general labelling
   tags$script('
      google.maps.event.addListener(map, "bounds_changed", function() {
         Shiny.onInputChange("bounds_coords", map.getBounds());
@@ -126,16 +99,12 @@ body <- dashboardBody(
   
   tags$script('            
     Shiny.addCustomMessageHandler("myCallbackHandler",     
-        
           function(json) {
             display_heatmap(json);
           }
     );
  ')
-  
 )
-
-
 
 ui <- dashboardPage(header, sidebar, body, skin = "purple")
 
@@ -154,12 +123,11 @@ server <- function(input, output, session) {
     cat(input$date)
 
     cat('hist')
-   # browser()
     if (input$crime_type == "All") {
-      newdata <- subset(mydata, Date == input$date  , 
+      newdata <- subset(pastData, Date == input$date  , 
                         select = c(Latitude, Longitude))
     } else {
-      newdata <- subset(mydata,Primary.Type == input$crime_type & Date == input$date  , 
+      newdata <- subset(pastData,Primary.Type == input$crime_type & Date == input$date  , 
                         select = c(Latitude, Longitude))
     }
       
@@ -178,16 +146,12 @@ server <- function(input, output, session) {
   })
   
   observe( {
-    #invalidateLater(500, session)
-    #str(input$bounds_coords[['south']]*2)
     bounds_coords <- input$bounds_coords
-    newdata <- subset(mydata, Latitude >= bounds_coords[['south']] & Latitude <= bounds_coords[['north']] &
+    newdata <- subset(pastData, Latitude >= bounds_coords[['south']] & Latitude <= bounds_coords[['north']] &
                         Longitude <= bounds_coords[['east']] & Longitude >= bounds_coords[['west']] & Date == input$date)
-    #browser()
     output$histPrimaryType<-renderPlot ({
       
         temp <- newdata %>% dplyr::select(Primary.Type, Arrest) %>% dplyr::group_by(Primary.Type) %>% count
-       # browser()
         if(nrow(temp) > 0 ) {
           importantTypes = temp[order(temp$n, decreasing = T),][1:6,]$Primary.Type
           
@@ -221,7 +185,6 @@ server <- function(input, output, session) {
       
       
       temp <- newdata %>% dplyr::select(Location.Description, Arrest) %>% dplyr::group_by(Location.Description) %>% count
-      #browser()
       if(nrow(temp) > 0 ) {
         importantTypes = temp[order(temp$n, decreasing = T),][1:6,]$Location.Description
         
@@ -247,15 +210,11 @@ server <- function(input, output, session) {
                   axis.title = element_text(size = 13),
                   axis.text.x = element_text(angle = 45, hjust = 1))
         }
-        
-        return (g)
+        g
       }
     })
-    
-    
-    #output$text1 <- renderText({str(input$bounds_coords, recursive=FALSE)})
+   
   })
-  #
 }
 
 shinyApp(ui, server)
