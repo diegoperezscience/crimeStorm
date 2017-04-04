@@ -2,7 +2,7 @@ source('read_past_data.R')
 
 # To Do: produce a real prediction matrix
 predict <- function(training_set = NULL) {
-  fakePredictions = "2016_pred.csv"
+  fakePredictions = "data/2016_pred.csv"
   predictions <-  read.csv(fakePredictions)
   predictions$Date <- gsub( " .*$", "", predictions$Date )
   predictions$Date <- as.Date(predictions$Date, format = "%m/%d/%Y")

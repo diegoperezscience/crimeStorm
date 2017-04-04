@@ -9,7 +9,7 @@ library(ggplot2)
 source("read_past_data.R")
 source("predict.R")
 
-pastData <- readPastDataset("2016_hist.csv")
+pastData <- readPastDataset("data/2016_hist.csv")
 date_from <-"2016/03/04"
 today <- as.Date("2016/03/19")
 date_till <-"2016/03/26"
