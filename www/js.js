@@ -36,7 +36,7 @@
      
 $( document ).ready(function() {
      orig = $("#shiny-tab-dashboard > div:nth-child(2) > div > div > div > div").html();
-     $("#shiny-tab-dashboard > div:nth-child(2) > div > div > div > div").html('<div style="width:50%;left:50%;height: 95.8px;position:absolute;opacity: 0.4;background-color: darkorange;"></div>' + orig)
+     $("#shiny-tab-dashboard > div:nth-child(2) > div > div > div > div").html('<div style="width:4px;left:67%;height: 71.8px;position:absolute; background-color: darkorange;font-weight:700;top: 26px;"><div style="margin-left:8px;">Today</div></div>' + orig)
 });
      
     
